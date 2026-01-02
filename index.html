@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Re D&D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --neon: #a855f7;
+    --neon-soft: rgba(168,85,247,.35);
+    --bg-dark: #0b0712;
+    --bg-mid: #140b24;
+}
+
+body {
+    background: radial-gradient(circle at top, #1b1033, var(--bg-dark));
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: Inter, system-ui, sans-serif;
+    color: #ede9fe;
+}
+
+/* ===== UI ===== */
+
+.screen {
+    width: 520px;
+    text-align: center;
+}
+
+h1 {
+    font-size: 3em;
+    letter-spacing: 6px;
+    margin-bottom: 22px;
+    color: #f5f3ff;
+    text-shadow:
+        0 0 14px var(--neon),
+        0 0 36px var(--neon-soft);
+}
+
+h2 {
+    text-shadow: 0 0 18px var(--neon-soft);
+}
+
+input {
+    width: 70%;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--neon);
+    background: #0f0a1a;
+    color: #fff;
+    text-align: center;
+    box-shadow: 0 0 18px var(--neon-soft);
+}
+
+button {
+    margin-top: 18px;
+    padding: 14px 32px;
+    border-radius: 18px;
+    border: 1px solid var(--neon);
+    cursor: pointer;
+    background: linear-gradient(135deg,#2a1248,#5b21b6);
+    color: #fff;
+    box-shadow:
+        0 0 20px var(--neon-soft),
+        inset 0 0 14px rgba(255,255,255,.12);
+}
+
+/* ===== SCENE ===== */
+
+.scene {
+    position: relative;
+    width: 520px;
+    height: 300px;
+    overflow: hidden;
+    border-radius: 20px;
+    background:
+        repeating-linear-gradient(
+            90deg,
+            #1b0f2e 0px,
+            #1b0f2e 40px,
+            #12091f 40px,
+            #12091f 80px
+        );
+    box-shadow:
+        0 0 48px var(--neon-soft),
+        inset 0 0 70px rgba(0,0,0,.65);
+}
+
+/* ===== FLOOR ===== */
+
+.floor {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 56px;
+    background: linear-gradient(180deg,#1f1033,#07040e);
+    border-top: 2px solid #6d28d9;
+}
+
+/* ===== DOORS ===== */
+
+.door {
+    position: absolute;
+    bottom: 56px;
+    width: 48px;
+    height: 76px;
+    background: linear-gradient(180deg,#2b145a,#0b0516);
+    border-radius: 10px 10px 6px 6px;
+    border: 2px solid #9333ea;
+    box-shadow:
+        inset 0 0 14px rgba(255,255,255,.05),
+        0 0 22px var(--neon-soft);
+    cursor: pointer;
+    overflow: hidden;
+}
+
+.door::before {
+    content: "";
+    position: absolute;
+    top: -14px;
+    left: -8px;
+    width: 64px;
+    height: 22px;
+    background: #160b2b;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 0 16px var(--neon-soft);
+}
+
+.door::after {
+    content: "";
+    position: absolute;
+    right: 8px;
+    top: 36px;
+    width: 6px;
+    height: 6px;
+    background: #e9d5ff;
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--neon);
+}
+
+.door.open {
+    background: #05020a;
+}
+
+/* ===== MONSTER ===== */
+
+.monster {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 80px;
+    filter: drop-shadow(0 0 22px #7c3aed);
+    animation: monsterIn .4s ease-out;
+}
+
+@keyframes monsterIn {
+    from { transform: translateX(-50%) scale(.2); opacity: 0; }
+    to   { transform: translateX(-50%) scale(1); opacity: 1; }
+}
+
+/* ===== PLAYER ===== */
+
+.player {
+    position: absolute;
+    bottom: 56px;
+    left: 40px;
+    width: 36px;
+    transition: left .6s cubic-bezier(.4,0,.2,1);
+    pointer-events: none;
+    filter:
+        drop-shadow(0 0 14px #a855f7)
+        drop-shadow(0 0 30px rgba(168,85,247,.65));
+}
+</style>
+</head>
+
+<body>
+<div id="app"></div>
+
+<script>
+const app = document.getElementById("app");
+
+let nickname = "";
+let level = 1;
+let maxLevels = 0;
+let correctDoor = 0;
+let locked = false;
+
+function startScreen() {
+    app.innerHTML = `
+        <div class="screen">
+            <h1>Re D&D</h1>
+            <input id="name" placeholder="Enter your nickname">
+            <br>
+            <button onclick="startGame()">Start Adventure</button>
+        </div>
+    `;
+}
+
+function startGame() {
+    const input = document.getElementById("name");
+    nickname = input ? input.value || "Warrior" : nickname || "Warrior";
+    level = 1;
+    maxLevels = rand(3,7);
+    nextLevel();
+}
+
+function restartGame() {
+    level = 1;
+    maxLevels = rand(3,7);
+    nextLevel();
+}
+
+function nextLevel() {
+    if (level > maxLevels) return winScreen();
+    locked = false;
+
+    const doorsCount = rand(2,5);
+    correctDoor = rand(0, doorsCount - 1);
+
+    const sceneWidth = 520;
+    const doorWidth = 48;
+    const spacing = (sceneWidth - doorsCount * doorWidth) / (doorsCount + 1);
+
+    let doorsHTML = "";
+
+    for (let i = 0; i < doorsCount; i++) {
+        const left = spacing + i * (doorWidth + spacing);
+        doorsHTML += `
+            <div class="door" style="left:${left}px" onclick="chooseDoor(${i})"></div>
+        `;
+    }
+
+    app.innerHTML = `
+        <div class="scene">
+            ${doorsHTML}
+            <img src="images/player.png" class="player" id="player">
+            <div class="floor"></div>
+        </div>
+    `;
+}
+
+function chooseDoor(index) {
+    if (locked) return;
+    locked = true;
+
+    const doors = document.querySelectorAll(".door");
+    const door = doors[index];
+    const player = document.getElementById("player");
+
+    player.style.left =
+        door.offsetLeft + door.offsetWidth / 2 - player.offsetWidth / 2 + "px";
+
+    setTimeout(() => {
+        if (index === correctDoor) {
+            level++;
+            nextLevel();
+        } else {
+            door.classList.add("open");
+            door.innerHTML = `<img src="images/monster.png" class="monster">`;
+            setTimeout(loseScreen, 1400);
+        }
+    }, 600);
+}
+
+function loseScreen() {
+    app.innerHTML = `
+        <div class="screen">
+            <h2>Next time be better</h2>
+            <button onclick="restartGame()">Restart game</button>
+        </div>
+    `;
+}
+
+function winScreen() {
+    app.innerHTML = `
+        <div class="screen">
+            <h2>Congratulations ${nickname},<br>you are the champion!</h2>
+            <button onclick="restartGame()">Play again</button>
+        </div>
+    `;
+}
+
+function rand(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+startScreen();
+</script>
+</body>
+</html>
